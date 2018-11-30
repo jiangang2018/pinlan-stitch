@@ -1,0 +1,122 @@
+apply plugin: 'com.android.library'
+//apply plugin: 'com.novoda.bintray-release'//添加
+
+android {
+    compileSdkVersion 28
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 28
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=gnustl_shared"
+                cppFlags "-std=c++11", "-frtti", "-fexceptions"
+                abiFilters 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a'
+            }
+        }
+        ndk {
+            abiFilters 'armeabi','x86', 'armeabi-v7a','arm64-v8a'
+        }
+    }
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
+            jni.srcDirs = ['src/main/jni', 'src/main/jniLibs/']
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.android.support:appcompat-v7:28.0.0'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    implementation project(':opencv')
+}
+
+group 'com.pinlan.stitch'
+version '1.0.0'
+
+
+//源代码打包任务
+task sourcesJar(type :Jar){
+    classifier 'sources' //分类器 区分其他jar包
+    from android.sourceSets.main.java.srcDirs
+}
+//创建文档生成任务
+task javadoc(type:Javadoc){
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+task docJar(type :Jar,dependsOn:javadoc){
+    classifier 'doc' //分类器 区分其他jar包
+    from javadoc.destinationDir
+}
+//配置 工程工件 jar产出的配置
+artifacts{
+    archives sourcesJar
+    archives docJar
+}
+
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.0'
+    }
+}
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'com.github.dcendents.android-maven'
+bintray {
+    user = 'jiangangw2018'  //用户名
+    key = 'f19d0c484713bc88395c2ebe68b5f0ea071bd75c'  //上一步获取的Api key
+    configurations = ['archives']
+    pkg {
+        repo = 'maven' //需要上传的仓库名
+        name = 'stitch'  //上传的项目名
+        licenses = ['Apache-2.0']
+//        vcsUrl = 'https://xxxx.git'//github对应地址，可以不写
+        version {
+            desc = 'image stitch'
+            released  = new Date()
+            vcsTag = '1.0'
+            attributes = ['gradle-plugin': '2.0']
+        }
+    }
+
+}
+
+
+install {
+    repositories.mavenInstaller {
+        //配置pom文件
+        pom.project {
+            licenses {
+                license {
+                    name 'The Apache Software License, Version 2.0'
+                    url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    distribution 'repo'
+                }
+            }
+        }
+    }
+}
